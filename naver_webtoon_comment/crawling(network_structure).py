@@ -8,10 +8,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from pprint import PrettyPrinter
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 
 pp = PrettyPrinter()
 
-service = Service("../chromedriver.exe")
+service = Service("./chromedriver.exe")
 driver = webdriver.Chrome(service=service)
 
 
@@ -80,6 +81,9 @@ def get_webtoon_comment(url):
         result[toon] = {name.text: [] for name in episode}
 
         for i in range(2):
+            plt.rc('font', family="Malgun Gothic")
+            plt.title("댓글 네트워크 sample")
+
             comment_graph = nx.Graph()
             name = episode[i].text
             print(f"=== {name} 댓글 ===")
@@ -152,20 +156,23 @@ def get_webtoon_comment(url):
                 except:
                     continue
 
-                comment_graph.add_node(user_name.text, content=comment.text, type="comment")
+                comment_user = user_name.text.split("옵션")[0]
+                comment_graph.add_node(comment_user, content=comment.text, type="comment")
                 for reply_user, reply_comment in zip(reply_users, reply_comments):
+                    reply_user = reply_user.split("옵션")[0].replace("\n", "")
                     comment_graph.add_edge(
-                        user_name.text,
+                        comment_user,
                         reply_user
                     )
 
                     comment_graph.nodes[reply_user]["content"] = reply_comment
                     comment_graph.nodes[reply_user]["type"] = "reply_comment"
 
+                    print("reply user:", reply_user)
                 print("reply comments 2:", reply_comments)
 
-            plt.rc('font', family="NanumGothic")
-            nx.draw(comment_graph, with_labels=True)
+            nx.draw(comment_graph, pos=nx.spring_layout(comment_graph))
+            nx.draw_networkx_labels(comment_graph, font_family="Malgun Gothic", pos=nx.spring_layout(comment_graph))
 
             plt.show()
             result[toon][name].append(comment_graph)
@@ -188,3 +195,4 @@ webtoon_graphDict = get_webtoon_comment(url="https://comic.naver.com/webtoon/wee
 
 with open("./webtoon_graph.pkl", "wb") as f:
     pickle.dump(webtoon_graphDict, f)
+

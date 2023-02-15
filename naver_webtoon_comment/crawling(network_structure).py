@@ -32,6 +32,7 @@ def scroll_full_down():
 
     time.sleep(2)
 
+# 댓글을 긁기 위한 함수
 def get_webtoon_comment(url):
 
     driver.get(url)

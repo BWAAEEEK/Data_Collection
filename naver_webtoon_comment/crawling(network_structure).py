@@ -8,7 +8,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from pprint import PrettyPrinter
 import matplotlib.pyplot as plt
-from matplotlib.font_manager import FontProperties
+import uuid
+from selenium.common import exceptions
 
 pp = PrettyPrinter()
 
@@ -90,7 +91,12 @@ def get_webtoon_comment(url):
             print(f"=== {name} 댓글 ===")
             episode[i].click()
             scroll_full_down()  # 셀레니움으로 페이지 전체 데이터를 가져오기 위해서 스크롤을 아래까지 쭉 내림 (근데 없어도 될 수도?)
-            driver.switch_to.frame("commentIframe")
+            try:
+                driver.switch_to.frame("commentIframe")
+            except exceptions.NoSuchFrameException:
+                print(toon, "로그인 해야함")
+                break
+
             # driver.find_element(
             #     by=By.CSS_SELECTOR,
             #     value="#cbox_module_wai_u_cbox_sort_option_tab2").click()
@@ -157,23 +163,29 @@ def get_webtoon_comment(url):
                 except:
                     continue
 
-                comment_user = user_name.text.split("옵션")[0]
-                comment_graph.add_node(comment_user, content=comment.text, type="comment")
+                comment_user = uuid.uuid4()
+
+                comment_user_name = user_name.text.split("옵션")[0]
+                comment_graph.add_node(comment_user, content=comment.text, type="comment", user_id=comment_user_name, root=True)
                 for reply_user, reply_comment in zip(reply_users, reply_comments):
-                    reply_user = reply_user.split("옵션")[0].replace("\n", "")
+                    reply_user_id = uuid.uuid4()
+                    reply_user_name = reply_user.split("옵션")[0].replace("\n", "")
                     comment_graph.add_edge(
                         comment_user,
-                        reply_user
+                        reply_user_id
                     )
 
-                    comment_graph.nodes[reply_user]["content"] = reply_comment
-                    comment_graph.nodes[reply_user]["type"] = "reply_comment"
+                    comment_graph.nodes[reply_user_id]["content"] = reply_comment
+                    comment_graph.nodes[reply_user_id]["type"] = "reply_comment"
+                    comment_graph.nodes[reply_user_id]["user_id"] = reply_user_name
+                    comment_graph.nodes[reply_user_id]["root"] = False
 
                     print("reply user:", reply_user)
                 print("reply comments 2:", reply_comments)
 
-            nx.draw(comment_graph, pos=nx.spring_layout(comment_graph))
-            nx.draw_networkx_labels(comment_graph, font_family="Malgun Gothic", pos=nx.spring_layout(comment_graph))
+            pos = nx.spring_layout(comment_graph)
+            nx.draw(comment_graph, pos=pos)
+            nx.draw_networkx_labels(comment_graph, font_family="Malgun Gothic", pos=pos)
 
             plt.show()
             result[toon][name].append(comment_graph)
